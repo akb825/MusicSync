@@ -22,23 +22,26 @@ static bool validateLocations(const Options& options)
 {
 	if (!boost::filesystem::is_directory(options.playlistInput))
 	{
-		std::fprintf(stderr, "Couldn't open playlist input directory '%s'.\n",
+		std::fprintf(stderr,
+			"Error: Couldn't open playlist input directory '%s'.\n",
 			options.playlistInput.c_str());
 		return false;
 	}
 
-	if (!boost::filesystem::is_directory(options.playlistOutput) ||
+	if (!boost::filesystem::is_directory(options.playlistOutput) &&
 		!boost::filesystem::create_directories(options.playlistOutput))
 	{
-		std::fprintf(stderr, "Couldn't open playlist output directory '%s'.\n",
+		std::fprintf(stderr,
+			"Error: Couldn't open playlist output directory '%s'.\n",
 			options.playlistOutput.c_str());
 		return false;
 	}
 
-	if (!boost::filesystem::is_directory(options.songOutput) ||
+	if (!boost::filesystem::is_directory(options.songOutput) &&
 		!boost::filesystem::create_directories(options.songOutput))
 	{
-		std::fprintf(stderr, "Couldn't open song output directory '%s'.\n",
+		std::fprintf(stderr,
+			"Error: Couldn't open song output directory '%s'.\n",
 			options.playlistOutput.c_str());
 		return false;
 	}
@@ -74,7 +77,7 @@ static void readPlaylists(std::list<PlaylistInfo>& playlists,
 		playlists.back().fileName = iter->path().filename().native();
 		playlists.back().modifiedTime =
 			boost::filesystem::last_write_time(iter->path()); 
-	} while (true);
+	}
 
 	std::printf("Done.\n");
 }
@@ -97,7 +100,7 @@ static void getSongPaths(SongMap& fileNames,
 			}
 			else
 			{
-				std::fprintf(stderr, "Error processing song '%s'.\n",
+				std::fprintf(stderr, "Error: Error processing song '%s'.\n",
 					eIter->song.c_str());
 			}
 		}
@@ -118,8 +121,11 @@ static void writePlaylists(std::list<PlaylistInfo>& playlists,
 		playlistPath /= pIter->fileName;
 
 		//See if it's already up to date.
-		if (boost::filesystem::last_write_time(playlistPath) >=
-			pIter->modifiedTime)
+		boost::system::error_code result;
+		std::time_t timeStamp = boost::filesystem::last_write_time(playlistPath,
+			result);
+		if (result == boost::system::errc::success &&
+			timeStamp >= pIter->modifiedTime)
 		{
 			continue;
 		}
@@ -196,10 +202,11 @@ static void syncSongs(const SongMap& songs, const Options& options)
 			result);
 		if (result != boost::system::errc::success)
 		{
-			std::fprintf(stderr, "Couldn't read file '%s'.\n", srcPath.c_str());
+			std::fprintf(stderr, "Error: Couldn't read file '%s'.\n",
+				srcPath.c_str());
 			continue;
 		}
-		std::time_t dstTimeStamp = boost::filesystem::last_write_time(srcPath,
+		std::time_t dstTimeStamp = boost::filesystem::last_write_time(dstPath,
 			result);
 		if (result == boost::system::errc::success)
 		{
@@ -207,14 +214,15 @@ static void syncSongs(const SongMap& songs, const Options& options)
 			if (srcTimeStamp <= dstTimeStamp)
 				continue;
 		}
-
 		
-		boost::filesystem::copy_file(srcPath, dstPath, result);
+		boost::filesystem::create_directories(dstPath.parent_path());
+		boost::filesystem::copy_file(srcPath, dstPath,
+			boost::filesystem::copy_option::overwrite_if_exists, result);
 		if (result == boost::system::errc::success)
 			std::printf("Copied song to '%s'.\n", iter->second.c_str());
 		else
 		{
-			std::fprintf(stderr, "Error copying song '%s' to '%s'.\n",
+			std::fprintf(stderr, "Error: Couldn't copying song '%s' to '%s'.\n",
 				iter->first.c_str(), iter->second.c_str());
 		}
 	}
@@ -249,7 +257,7 @@ static void removeDeletedSongs(const SongMap& songs, const Options& options)
 		}
 		if (relativePaths.find(relativePath) == relativePaths.end())
 		{
-			std::printf("Removing song '%s'.", relativePath.c_str());
+			std::printf("Removing song '%s'.\n", relativePath.c_str());
 			boost::filesystem::remove(dIter->path());
 		}
 	}
@@ -269,12 +277,20 @@ bool syncMusic(const Options& options)
 	SongMap songs;
 
 	readPlaylists(playlists, options);
+	std::printf("\n");
 	getSongPaths(songs, playlists, options);
 	if (options.removePlaylists)
+	{
 		removeDeletedPlaylists(playlists, options);
+		std::printf("\n");
+	}
 	if (options.removeSongs)
+	{
 		removeDeletedSongs(songs, options);
+		std::printf("\n");
+	}
 	writePlaylists(playlists, options);
+	std::printf("\n");
 	syncSongs(songs, options);
 
 	return true;

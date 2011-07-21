@@ -10,7 +10,7 @@ bool readLine(std::string& line, std::istream& stream)
 	const unsigned int cBufferSize = 1024;
 	char buffer[cBufferSize];
 	stream.getline(buffer, cBufferSize);
-	if (!stream.fail())
+	if (stream.eof() || !stream.fail())
 	{
 		line = buffer;
 		return true;
@@ -24,7 +24,7 @@ bool readLine(std::string& line, std::istream& stream)
 		currBufferSize *= 2;
 		char* dynBuffer = new char[currBufferSize];
 		stream.getline(buffer, cBufferSize);
-		if (!stream.fail())
+		if (stream.eof() || !stream.fail())
 		{
 			line = buffer;
 			return true;
@@ -43,6 +43,9 @@ bool getRelativePath(std::string& finalPath, const std::string& path,
 	if (!trimFront.empty() && path.find(trimFront) != 0)
 		return false;
 	finalPath = path.substr(trimFront.size());
+	while (!finalPath.empty() && *finalPath.begin() == cPathSeparator)
+		finalPath.erase(finalPath.begin());
+	return true;
 }
 
 std::string getPlaylistSongPath(const std::string& relativePath,

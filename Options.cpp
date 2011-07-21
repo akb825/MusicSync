@@ -28,7 +28,7 @@ static bool getNextString(unsigned int& index, std::string& string,
 }
 
 Options::Options()
-	: removePlaylists(false), removeSongs(false)
+	: removePlaylists(false), removeSongs(false), windowsSeparators(false)
 {
 }
 
@@ -46,6 +46,11 @@ bool Options::getFromCommandLine(unsigned int argc, const char* const* argv)
 		{
 			++index;
 			removeSongs = true;
+		}
+		else if (std::strcmp(argv[index], cWindowsSeparators) == 0)
+		{
+			++index;
+			windowsSeparators = true;
 		}
 		else if (std::strcmp(argv[index], cPathTrim) == 0)
 		{
@@ -89,9 +94,10 @@ bool Options::getFromCommandLine(unsigned int argc, const char* const* argv)
 void Options::printHelp()
 {
 	std::fprintf(stderr,
-		"Usage: %s [%s] [%s] [%s]\n"
-		"         [%s prefix] [%s prefix] %s path\n"
+		"Usage: %s [%s] [%s]\n"
+		"         [%s] [%s prefix] [%s prefix]\n"
 		"         %s path %s path\n"
+		"         %s path\n"
 		"\nOptions:\n"
 		"   %s: Remove playlists that appear in the playlist output\n"
 			"     directory but not the input directory.\n"

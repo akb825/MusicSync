@@ -6,7 +6,7 @@
 #include <cassert>
 
 static const char* const cHeader = "#EXTM3U";
-static const char* const cInfo = "#EXTINFO";
+static const char* const cInfo = "#EXTINF";
 const char * const Playlist::cExtension = ".m3u";
 
 bool Playlist::load(const std::string& fileName)
@@ -15,20 +15,22 @@ bool Playlist::load(const std::string& fileName)
 	stream.open(fileName.c_str(), std::ifstream::in);
 	if (!stream)
 	{
-		std::fprintf(stderr, "Couldn't open file '%s'.\n", fileName.c_str());
+		std::fprintf(stderr, "Error: Couldn't open file '%s'.\n",
+			fileName.c_str());
 		return false;
 	}
 
 	std::string header;
 	if (!Helpers::readLine(header, stream))
 	{
-		std::fprintf(stderr, "Error reading file '%s'.\n", fileName.c_str());
+		std::fprintf(stderr, "Error: Error reading file '%s'.\n",
+			fileName.c_str());
 		return false;
 	}
 
 	if (header != cHeader)
 	{
-		std::fprintf(stderr, "File '%s' isn't a valid M3U file.\n",
+		std::fprintf(stderr, "Error: File '%s' isn't a valid M3U file.\n",
 			fileName.c_str());
 		return false;
 	}
@@ -38,24 +40,28 @@ bool Playlist::load(const std::string& fileName)
 	{
 		if (!Helpers::readLine(info, stream))
 		{
-			std::fprintf(stderr, "Error reading file '%s'.\n", fileName.c_str());
+			std::fprintf(stderr, "Error: Error reading file '%s'.\n",
+				fileName.c_str());
 			return false;
 		}
+		if (info.empty())
+			continue;
 		if (info.find(cInfo) != 0 || stream.eof())
 		{
-			std::fprintf(stderr, "File '%s' isn't a valid M3U file.\n",
+			std::fprintf(stderr, "Error: File '%s' isn't a valid M3U file.\n",
 				fileName.c_str());
 			return false;
 		}
 		if (!Helpers::readLine(songPath, stream))
 		{
-			std::fprintf(stderr, "Error reading file '%s'.\n", fileName.c_str());
+			std::fprintf(stderr, "Error: Error reading file '%s'.\n",
+				fileName.c_str());
 			return false;
 		}
 		addSong(songPath, info);
 	} while (!stream.eof());
 
-	std::printf("Read playlist '%d'.", fileName.c_str());
+	std::printf("Loaded playlist '%s'.\n", fileName.c_str());
 	return true;
 }
 
@@ -65,7 +71,8 @@ bool Playlist::save(const std::string& fileName) const
 	stream.open(fileName.c_str(), std::ofstream::out);
 	if (!stream)
 	{
-		std::fprintf(stderr, "Couldn't save file '%s'.\n", fileName.c_str());
+		std::fprintf(stderr, "Error: Couldn't save file '%s'.\n",
+			fileName.c_str());
 		return false;
 	}
 
@@ -74,7 +81,6 @@ bool Playlist::save(const std::string& fileName) const
 	for (EntryVector::const_iterator iter = m_entries.begin();
 		iter != m_entries.end(); ++iter)
 	{
-		stream << std::endl;
 		stream << iter->info << std::endl;
 		stream << iter->song << std::endl;
 	}
