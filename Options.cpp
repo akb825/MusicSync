@@ -109,7 +109,7 @@ void Options::printHelp()
 		"   %s: The input directory to read M3U playlists from.\n"
 		"   %s: The output directory to write M3U playlists to.\n"
 		"   %s: The output directory to write song fiels to.\n",
-		cProgramName, cRemovePlaylists, cWindowsSeparators, cRemoveSongs,
+		cProgramName, cRemovePlaylists, cRemoveSongs, cWindowsSeparators,
 		cPathTrim, cPathPrefix, cPlaylistInput, cPlaylistOutput, cSongOutput,
 		cRemovePlaylists, cRemoveSongs, cWindowsSeparators, cPathTrim,
 		cPathPrefix, cPlaylistInput, cPlaylistOutput, cSongOutput);
