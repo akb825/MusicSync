@@ -3,18 +3,22 @@
 #include "Helpers.h"
 #include "Options.h"
 #include <tr1/unordered_map>
+#include <tr1/unordered_set>
 #include <list>
 #include <cstdio>
+#include <cassert>
 #include <boost/filesystem.hpp>
+
+typedef std::tr1::unordered_map<std::string, std::string> SongMap;
 
 struct PlaylistInfo
 {
 	Playlist playlist;
 	std::string fileName;
-	time_t modifiedTime;
+	std::time_t modifiedTime;
 };
 
-static bool validateLocations(const Option& options)
+static bool validateLocations(const Options& options)
 {
 	if (!boost::filesystem::is_directory(options.playlistInput))
 	{
@@ -24,27 +28,32 @@ static bool validateLocations(const Option& options)
 	}
 
 	if (!boost::filesystem::is_directory(options.playlistOutput) ||
-		!boost::filesystem::create_directories(options.playlistOuptut))
+		!boost::filesystem::create_directories(options.playlistOutput))
 	{
 		std::fprintf(stderr, "Couldn't open playlist output directory '%s'.\n",
 			options.playlistOutput.c_str());
 		return false;
 	}
-	closedir(directory);
 
 	if (!boost::filesystem::is_directory(options.songOutput) ||
-		!boost::filesystem::create_directories(options.songOuptut))
+		!boost::filesystem::create_directories(options.songOutput))
 	{
 		std::fprintf(stderr, "Couldn't open song output directory '%s'.\n",
 			options.playlistOutput.c_str());
 		return false;
 	}
-	closedir(directory);
 
 	return true;
 }
 
-static bool readPlaylists(std::list<PlaylistInfo>& playlists,
+static bool isPlaylist(const boost::filesystem::directory_entry& entry)
+{
+	if (entry.status().type() != boost::filesystem::regular_file)
+		return false;
+	return entry.path().extension() == Playlist::cExtension;
+}
+
+static void readPlaylists(std::list<PlaylistInfo>& playlists,
 	const Options& options)
 {
 	std::printf("Reading playlists...\n");
@@ -52,67 +61,64 @@ static bool readPlaylists(std::list<PlaylistInfo>& playlists,
 	for (boost::filesystem::directory_iterator iter(options.playlistInput);
 		iter != boost::filesystem::directory_iterator(); ++iter)
 	{
-		const boost::filesystem::directory_entry& entry = *iter;
-		if (entry.status().type() != boost::filesystem::regular_file &&
-			entry.status().type() != boost::filesystem::symlink_file)
-			continue;
-
-		if (entry.path().extension() != Playlist::cExtension)
+		if (!isPlaylist(*iter))
 			continue;
 
 		playlists.push_back(PlaylistInfo());
-		std::string path = Helpers::appendPath(options.playlistInput,
-			entry.path().native());
-		if (!playlists.back().playlist.load(path))
+		if (!playlists.back().playlist.load(iter->path().native()))
 		{
 			playlists.pop_back();
 			continue;
 		}
 
-		playlists.back().fileName = path.filename().native();
-		playlists.back.modifiedTime = boost::filesystem::last_write_time(path); 
+		playlists.back().fileName = iter->path().filename().native();
+		playlists.back().modifiedTime =
+			boost::filesystem::last_write_time(iter->path()); 
 	} while (true);
 
 	std::printf("Done.\n");
 }
 
-void getSongPaths(std::tr1::unordered_map<std::string, std::string>& fileNames,
+static void getSongPaths(SongMap& fileNames,
 	const std::list<PlaylistInfo>& playlists, const Options& options)
 {
 	std::string finalPath;
-	for (std::list<PalylistInfo>::const_iterator pIter = playlists.begin();
+	for (std::list<PlaylistInfo>::const_iterator pIter = playlists.begin();
 		pIter != playlists.end(); ++pIter)
 	{
 		const Playlist::EntryVector& entries = pIter->playlist.getEntries();
 		for (Playlist::EntryVector::const_iterator eIter = entries.begin();
 			eIter != entries.end(); ++eIter)
 		{
-			if (Helpers::processPath(finalPath, eIter->song, options.pathTrim,
-				options.pathPrefix))
+			if (Helpers::getRelativePath(finalPath, eIter->song,
+				options.pathTrim))
 			{
 				fileNames.insert(std::make_pair(eIter->song, finalPath));
 			}
 			else
 			{
-				std::printf(stderr, "Error processing song '%s'.\n",
+				std::fprintf(stderr, "Error processing song '%s'.\n",
 					eIter->song.c_str());
 			}
 		}
 	}
 }
 
-void writePlaylists(std::list<PlaylistInfo>& playlists, const Option& options)
+static void writePlaylists(std::list<PlaylistInfo>& playlists,
+	const Options& options)
 {
 	std::printf("Writing modified playlists...\n");
 
 	std::string songPath;
 	boost::filesystem::path playlistPath;
-	for (std::list<PalylistInfo>::const_iterator pIter = playlists.begin();
+	for (std::list<PlaylistInfo>::const_iterator pIter = playlists.begin();
 		pIter != playlists.end(); ++pIter)
 	{
 		playlistPath = options.playlistOutput;
 		playlistPath /= pIter->fileName;
-		if (boost::filesystem::last_write_type(playlistPath) >=
+
+		//See if it's already up to date.
+		if (boost::filesystem::last_write_time(playlistPath) >=
 			pIter->modifiedTime)
 		{
 			continue;
@@ -123,17 +129,129 @@ void writePlaylists(std::list<PlaylistInfo>& playlists, const Option& options)
 		for (Playlist::EntryVector::const_iterator eIter = entries.begin();
 			eIter != entries.end(); ++eIter)
 		{
-			if (!Helpers::processPath(songPath, eIter->song, options.pathTrim,
-				options.pathPrefix))
+			if (!Helpers::getRelativePath(songPath, eIter->song,
+				options.pathTrim))
 			{
 				continue;
 			}
 
-			if (options.windowsSeparators)
-				songPath = Helpers::convertSeparators(songPath);
-			newPlaylist.push_back(songPath, eIter.info);
+			songPath = Helpers::getPlaylistSongPath(songPath,
+				options.pathPrefix, options.windowsSeparators);
+			newPlaylist.addSong(songPath, eIter->info);
 		}
 		newPlaylist.save(playlistPath.native());
+	}
+
+	std::printf("Done.\n");
+}
+
+static void removeDeletedPlaylists(std::list<PlaylistInfo>& playlists,
+	const Options& options)
+{
+	std::printf("Removing deleted playlists...\n");
+
+	for (boost::filesystem::directory_iterator dIter(options.playlistOutput);
+		dIter != boost::filesystem::directory_iterator(); ++dIter)
+	{
+		if (!isPlaylist(*dIter))
+			continue;
+		bool found = false;
+		for (std::list<PlaylistInfo>::const_iterator pIter = playlists.begin();
+			pIter != playlists.end(); ++pIter)
+		{
+			if (pIter->fileName == dIter->path().filename())
+			{
+				found = true;
+				break;
+			}
+		}
+		if (found)
+			continue;
+
+		std::printf("Removing file '%s'.\n", dIter->path().c_str());
+		boost::filesystem::remove(dIter->path());
+	}
+
+	std::printf("Done.\n");
+}
+
+static void syncSongs(const SongMap& songs, const Options& options)
+{
+	std::printf("Synchronizing songs...\n");
+
+	boost::filesystem::path srcBase = options.playlistInput;
+	boost::filesystem::path dstBase = options.songOutput;
+	for (SongMap::const_iterator iter = songs.begin(); iter != songs.end();
+		++iter)
+	{
+		boost::filesystem::path srcPath = iter->first;
+		//Assume it's reative to the playlist input if it's not absolute.
+		if (!srcPath.is_absolute())
+			srcPath = srcBase/srcPath;
+
+		boost::filesystem::path dstPath = dstBase/iter->second;
+
+		boost::system::error_code result;
+		std::time_t srcTimeStamp = boost::filesystem::last_write_time(srcPath,
+			result);
+		if (result != boost::system::errc::success)
+		{
+			std::fprintf(stderr, "Couldn't read file '%s'.\n", srcPath.c_str());
+			continue;
+		}
+		std::time_t dstTimeStamp = boost::filesystem::last_write_time(srcPath,
+			result);
+		if (result == boost::system::errc::success)
+		{
+			//See if it's already up to date.
+			if (srcTimeStamp <= dstTimeStamp)
+				continue;
+		}
+
+		
+		boost::filesystem::copy_file(srcPath, dstPath, result);
+		if (result == boost::system::errc::success)
+			std::printf("Copied song to '%s'.\n", iter->second.c_str());
+		else
+		{
+			std::fprintf(stderr, "Error copying song '%s' to '%s'.\n",
+				iter->first.c_str(), iter->second.c_str());
+		}
+	}
+
+	std::printf("Done.\n");
+}
+
+static void removeDeletedSongs(const SongMap& songs, const Options& options)
+{
+	std::printf("Removing deleted songs...\n");
+
+	typedef std::tr1::unordered_set<std::string> SongSet;
+	SongSet relativePaths;
+	for (SongMap::const_iterator iter = songs.begin(); iter != songs.end();
+		++iter)
+	{
+		relativePaths.insert(iter->second);
+	}
+
+	for (boost::filesystem::recursive_directory_iterator
+			dIter(options.songOutput);
+		dIter != boost::filesystem::recursive_directory_iterator(); ++dIter)
+	{
+		if (dIter->status().type() != boost::filesystem::regular_file)
+			continue;
+		std::string relativePath;
+		if (!Helpers::getRelativePath(relativePath, dIter->path().native(),
+			options.songOutput))
+		{
+			assert(false);
+			continue;
+		}
+		if (relativePaths.find(relativePath) == relativePaths.end())
+		{
+			std::printf("Removing song '%s'.", relativePath.c_str());
+			boost::filesystem::remove(dIter->path());
+		}
 	}
 
 	std::printf("Done.\n");
@@ -146,6 +264,20 @@ bool syncMusic(const Options& options)
 {
 	if (!validateLocations(options))
 		return false;
+
+	std::list<PlaylistInfo> playlists;
+	SongMap songs;
+
+	readPlaylists(playlists, options);
+	getSongPaths(songs, playlists, options);
+	if (options.removePlaylists)
+		removeDeletedPlaylists(playlists, options);
+	if (options.removeSongs)
+		removeDeletedSongs(songs, options);
+	writePlaylists(playlists, options);
+	syncSongs(songs, options);
+
+	return true;
 }
 
 }

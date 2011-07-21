@@ -12,7 +12,7 @@ static const char cWindowsPathSeparator = '\\';
 bool readLine(std::string& line, std::istream& stream);
 bool getRelativePath(std::string& finalPath, const std::string& path,
 	const std::string& trimFront);
-std::string getPlaylistPath(const std::string& relativePath,
+std::string getPlaylistSongPath(const std::string& relativePath,
 	const std::string& prefix, bool windowsSeparators);
 std::string convertSeparators(const std::string& path);
 

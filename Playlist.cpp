@@ -79,7 +79,7 @@ bool Playlist::save(const std::string& fileName) const
 		stream << iter->song << std::endl;
 	}
 
-	std::printf("Saved playlist '%s'.\n", fielName.c_str());
+	std::printf("Saved playlist '%s'.\n", fileName.c_str());
 	return true;
 }
 

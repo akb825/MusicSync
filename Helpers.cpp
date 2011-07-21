@@ -42,7 +42,25 @@ bool getRelativePath(std::string& finalPath, const std::string& path,
 {
 	if (!trimFront.empty() && path.find(trimFront) != 0)
 		return false;
-	finalPath = path.substr(trimFront.substr(trimFront.size()));
+	finalPath = path.substr(trimFront.size());
+}
+
+std::string getPlaylistSongPath(const std::string& relativePath,
+	const std::string& prefix, bool windowsSeparators)
+{
+	boost::filesystem::path finalPath = prefix;
+	finalPath /= relativePath;
+	std::string retVal = finalPath.native();
+	if (windowsSeparators)
+	{
+		for (std::string::iterator iter = retVal.begin();
+			iter != retVal.end(); ++iter)
+		{
+			if (*iter == cPathSeparator)
+				*iter = cWindowsPathSeparator;
+		}
+	}
+	return retVal;
 }
 
 bool processPath(std::string& finalPath, const std::string& path,
