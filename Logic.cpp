@@ -85,7 +85,6 @@ static void readPlaylists(std::list<PlaylistInfo>& playlists,
 static void getSongPaths(SongMap& songs,
 	const std::list<PlaylistInfo>& playlists, const Options& options)
 {
-	unsigned int invalidCounter = 0;
 	std::string finalPath;
 	for (std::list<PlaylistInfo>::const_iterator pIter = playlists.begin();
 		pIter != playlists.end(); ++pIter)
@@ -97,7 +96,7 @@ static void getSongPaths(SongMap& songs,
 			if (Helpers::getRelativePath(finalPath, eIter->song,
 				options.pathTrim))
 			{
-				finalPath = Helpers::repairFilename(invalidCounter, finalPath);
+				finalPath = Helpers::repairFilename(finalPath);
 				songs.insert(std::make_pair(eIter->song, finalPath));
 			}
 			else
@@ -143,7 +142,7 @@ static void writePlaylists(std::list<PlaylistInfo>& playlists,
 
 			songPath = Helpers::getPlaylistSongPath(foundIter->second,
 				options.pathPrefix, options.windowsSeparators);
-			newPlaylist.addSong(foundIter->second, eIter->info);
+			newPlaylist.addSong(songPath, eIter->info);
 		}
 		newPlaylist.save(playlistPath.native());
 	}

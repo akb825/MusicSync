@@ -1,4 +1,5 @@
 #include "Helpers.h"
+#include <openssl/md5.h>
 #include <boost/filesystem.hpp>
 #include <cctype>
 #include <cstdio>
@@ -65,7 +66,7 @@ static bool isValid(char c)
 	return true;
 }
 
-std::string repairFilename(unsigned int& counter, const std::string& path)
+std::string repairFilename(const std::string& path)
 {
 	boost::filesystem::path origPath = path;
 	std::string fileName = origPath.filename().native();
@@ -80,14 +81,12 @@ std::string repairFilename(unsigned int& counter, const std::string& path)
 
 	if (numInvalid == 0)
 		return path;
-	printf("asdf\n");
 
 	const float cMaxToReplace = 0.25f;
-	const char cReplaceChar = '_';
-	const char* const cReplaceString = "Too Much Unicode";
 
 	if (float(numInvalid)/fileName.size() <= cMaxToReplace)
 	{
+		const char cReplaceChar = '_';
 		for (std::string::iterator iter = fileName.begin();
 			iter != fileName.end(); ++iter)
 		{
@@ -99,8 +98,16 @@ std::string repairFilename(unsigned int& counter, const std::string& path)
 	{
 		const unsigned int cBufferSize = 256;
 		char buffer[cBufferSize];
-		int result = snprintf(buffer, cBufferSize, "%s %u%s", cReplaceString,
-			counter++, origPath.extension().c_str());
+		unsigned char hash[MD5_DIGEST_LENGTH];
+		MD5((const unsigned char*)path.c_str(), path.size(), hash);
+
+		//2 hex digits per byte
+		char hashString[MD5_DIGEST_LENGTH*2 + 1];
+		for (unsigned int i = 0; i < MD5_DIGEST_LENGTH; ++i)
+			std::snprintf(hashString + i*2, 3, "%02X", hash[i]);
+
+		int result = snprintf(buffer, cBufferSize, "%s%s", hashString,
+			origPath.extension().c_str());
 		assert(result >= 0 && result < cBufferSize);
 		fileName = buffer;
 	}
