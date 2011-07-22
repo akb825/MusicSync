@@ -1,5 +1,8 @@
 #include "Helpers.h"
 #include <boost/filesystem.hpp>
+#include <cctype>
+#include <cstdio>
+#include <cassert>
 
 namespace Helpers
 {
@@ -46,6 +49,62 @@ bool getRelativePath(std::string& finalPath, const std::string& path,
 	while (!finalPath.empty() && *finalPath.begin() == cPathSeparator)
 		finalPath.erase(finalPath.begin());
 	return true;
+}
+
+static bool isValid(char c)
+{
+	const char cReserved[] = {'<', '>', ':', '"', '/', '\\', '|', '?', '*'};
+
+	if (!std::isprint(c))
+		return false;
+	for (std::size_t i = 0; i < sizeof(cReserved)/sizeof(char); ++i)
+	{
+		if (c == cReserved[i])
+			return false;
+	}
+	return true;
+}
+
+std::string repairFilename(unsigned int& counter, const std::string& path)
+{
+	boost::filesystem::path origPath = path;
+	std::string fileName = origPath.filename().native();
+
+	unsigned int numInvalid = 0;
+	for (std::string::const_iterator iter = fileName.begin();
+		iter != fileName.end(); ++iter)
+	{
+		if (!isValid(*iter))
+			++numInvalid;
+	}
+
+	if (numInvalid == 0)
+		return path;
+	printf("asdf\n");
+
+	const float cMaxToReplace = 0.25f;
+	const char cReplaceChar = '_';
+	const char* const cReplaceString = "Too Much Unicode";
+
+	if (float(numInvalid)/fileName.size() <= cMaxToReplace)
+	{
+		for (std::string::iterator iter = fileName.begin();
+			iter != fileName.end(); ++iter)
+		{
+			if (!isValid(*iter))
+				*iter = cReplaceChar;
+		}
+	}
+	else
+	{
+		const unsigned int cBufferSize = 256;
+		char buffer[cBufferSize];
+		int result = snprintf(buffer, cBufferSize, "%s %u%s", cReplaceString,
+			counter++, origPath.extension().c_str());
+		assert(result >= 0 && result < cBufferSize);
+		fileName = buffer;
+	}
+	return (origPath.parent_path()/fileName).native();
 }
 
 std::string getPlaylistSongPath(const std::string& relativePath,

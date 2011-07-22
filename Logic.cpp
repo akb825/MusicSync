@@ -82,9 +82,10 @@ static void readPlaylists(std::list<PlaylistInfo>& playlists,
 	std::printf("Done.\n");
 }
 
-static void getSongPaths(SongMap& fileNames,
+static void getSongPaths(SongMap& songs,
 	const std::list<PlaylistInfo>& playlists, const Options& options)
 {
+	unsigned int invalidCounter = 0;
 	std::string finalPath;
 	for (std::list<PlaylistInfo>::const_iterator pIter = playlists.begin();
 		pIter != playlists.end(); ++pIter)
@@ -96,7 +97,8 @@ static void getSongPaths(SongMap& fileNames,
 			if (Helpers::getRelativePath(finalPath, eIter->song,
 				options.pathTrim))
 			{
-				fileNames.insert(std::make_pair(eIter->song, finalPath));
+				finalPath = Helpers::repairFilename(invalidCounter, finalPath);
+				songs.insert(std::make_pair(eIter->song, finalPath));
 			}
 			else
 			{
@@ -108,7 +110,7 @@ static void getSongPaths(SongMap& fileNames,
 }
 
 static void writePlaylists(std::list<PlaylistInfo>& playlists,
-	const Options& options)
+	const SongMap& songs, const Options& options)
 {
 	std::printf("Writing modified playlists...\n");
 
@@ -135,15 +137,13 @@ static void writePlaylists(std::list<PlaylistInfo>& playlists,
 		for (Playlist::EntryVector::const_iterator eIter = entries.begin();
 			eIter != entries.end(); ++eIter)
 		{
-			if (!Helpers::getRelativePath(songPath, eIter->song,
-				options.pathTrim))
-			{
+			SongMap::const_iterator foundIter = songs.find(eIter->song);
+			if (foundIter == songs.end())
 				continue;
-			}
 
-			songPath = Helpers::getPlaylistSongPath(songPath,
+			songPath = Helpers::getPlaylistSongPath(foundIter->second,
 				options.pathPrefix, options.windowsSeparators);
-			newPlaylist.addSong(songPath, eIter->info);
+			newPlaylist.addSong(foundIter->second, eIter->info);
 		}
 		newPlaylist.save(playlistPath.native());
 	}
@@ -289,7 +289,7 @@ bool syncMusic(const Options& options)
 		removeDeletedSongs(songs, options);
 		std::printf("\n");
 	}
-	writePlaylists(playlists, options);
+	writePlaylists(playlists, songs, options);
 	std::printf("\n");
 	syncSongs(songs, options);
 
