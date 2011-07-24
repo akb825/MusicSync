@@ -83,8 +83,10 @@ std::string repairFilename(const std::string& path)
 		return path;
 
 	const float cMaxToReplace = 0.25f;
+	unsigned int nameLength = (unsigned int)(fileName.size() -
+		origPath.extension().native().size());
 
-	if (float(numInvalid)/fileName.size() <= cMaxToReplace)
+	if (float(numInvalid)/nameLength <= cMaxToReplace)
 	{
 		const char cReplaceChar = '_';
 		for (std::string::iterator iter = fileName.begin();
