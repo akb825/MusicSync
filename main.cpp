@@ -7,5 +7,4 @@ int main(int argc, const char* const* argv)
 	if (!options.getFromCommandLine(argc, argv))
 		return -1;
 	return !Logic::syncMusic(options);
-	return 0;
 }
