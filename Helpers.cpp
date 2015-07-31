@@ -69,7 +69,7 @@ static bool isValid(char c)
 std::string repairFilename(const std::string& path)
 {
 	boost::filesystem::path origPath = path;
-	std::string fileName = origPath.filename().native();
+	std::string fileName = origPath.filename().string();
 
 	unsigned int numInvalid = 0;
 	for (std::string::const_iterator iter = fileName.begin();
@@ -109,11 +109,11 @@ std::string repairFilename(const std::string& path)
 			std::snprintf(hashString + i*2, 3, "%02X", hash[i]);
 
 		int result = snprintf(buffer, cBufferSize, "%s%s", hashString,
-			origPath.extension().c_str());
+			origPath.extension().string().c_str());
 		assert(result >= 0 && result < cBufferSize);
 		fileName = buffer;
 	}
-	return (origPath.parent_path()/fileName).native();
+	return (origPath.parent_path()/fileName).string();
 }
 
 std::string getPlaylistSongPath(const std::string& relativePath,
@@ -121,7 +121,7 @@ std::string getPlaylistSongPath(const std::string& relativePath,
 {
 	boost::filesystem::path finalPath = prefix;
 	finalPath /= relativePath;
-	std::string retVal = finalPath.native();
+	std::string retVal = finalPath.string();
 	if (windowsSeparators)
 	{
 		for (std::string::iterator iter = retVal.begin();
@@ -141,7 +141,7 @@ bool processPath(std::string& finalPath, const std::string& path,
 	if (!trimFront.empty() && path.find(trimFront) != 0)
 		return false;
 	std::string trimmed = path.substr(trimFront.size());
-	finalPath = (boost::filesystem::path(newFront)/trimmed).native();
+	finalPath = (boost::filesystem::path(newFront)/trimmed).string();
 	return true;
 }
 

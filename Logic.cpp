@@ -2,14 +2,14 @@
 #include "Playlist.h"
 #include "Helpers.h"
 #include "Options.h"
-#include <tr1/unordered_map>
-#include <tr1/unordered_set>
+#include <unordered_map>
+#include <unordered_set>
 #include <list>
 #include <cstdio>
 #include <cassert>
 #include <boost/filesystem.hpp>
 
-typedef std::tr1::unordered_map<std::string, std::string> SongMap;
+typedef std::unordered_map<std::string, std::string> SongMap;
 
 struct PlaylistInfo
 {
@@ -68,13 +68,13 @@ static void readPlaylists(std::list<PlaylistInfo>& playlists,
 			continue;
 
 		playlists.push_back(PlaylistInfo());
-		if (!playlists.back().playlist.load(iter->path().native()))
+		if (!playlists.back().playlist.load(iter->path().string()))
 		{
 			playlists.pop_back();
 			continue;
 		}
 
-		playlists.back().fileName = iter->path().filename().native();
+		playlists.back().fileName = iter->path().filename().string();
 		playlists.back().modifiedTime =
 			boost::filesystem::last_write_time(iter->path()); 
 	}
@@ -144,7 +144,7 @@ static void writePlaylists(std::list<PlaylistInfo>& playlists,
 				options.pathPrefix, options.windowsSeparators);
 			newPlaylist.addSong(songPath, eIter->info);
 		}
-		newPlaylist.save(playlistPath.native());
+		newPlaylist.save(playlistPath.string());
 	}
 
 	std::printf("Done.\n");
@@ -154,6 +154,8 @@ static void removeDeletedPlaylists(std::list<PlaylistInfo>& playlists,
 	const Options& options)
 {
 	std::printf("Removing deleted playlists...\n");
+
+	std::vector<boost::filesystem::path> removeFiles;
 
 	for (boost::filesystem::directory_iterator dIter(options.playlistOutput);
 		dIter != boost::filesystem::directory_iterator(); ++dIter)
@@ -173,9 +175,12 @@ static void removeDeletedPlaylists(std::list<PlaylistInfo>& playlists,
 		if (found)
 			continue;
 
-		std::printf("Removing file '%s'.\n", dIter->path().c_str());
-		boost::filesystem::remove(dIter->path());
+		std::printf("Removing file '%s'.\n", dIter->path().string().c_str());
+		removeFiles.emplace_back(dIter->path());
 	}
+
+	for (const boost::filesystem::path& path : removeFiles)
+		boost::filesystem::remove(path);
 
 	std::printf("Done.\n");
 }
@@ -202,7 +207,7 @@ static void syncSongs(const SongMap& songs, const Options& options)
 		if (result != boost::system::errc::success)
 		{
 			std::fprintf(stderr, "Error: Couldn't read file '%s'.\n",
-				srcPath.c_str());
+				srcPath.string().c_str());
 			continue;
 		}
 		std::time_t dstTimeStamp = boost::filesystem::last_write_time(dstPath,
@@ -233,13 +238,15 @@ static void removeDeletedSongs(const SongMap& songs, const Options& options)
 {
 	std::printf("Removing deleted songs...\n");
 
-	typedef std::tr1::unordered_set<std::string> SongSet;
+	typedef std::unordered_set<std::string> SongSet;
 	SongSet relativePaths;
 	for (SongMap::const_iterator iter = songs.begin(); iter != songs.end();
 		++iter)
 	{
 		relativePaths.insert(iter->second);
 	}
+
+	std::vector<boost::filesystem::path> removeFiles;
 
 	for (boost::filesystem::recursive_directory_iterator
 			dIter(options.songOutput);
@@ -248,7 +255,7 @@ static void removeDeletedSongs(const SongMap& songs, const Options& options)
 		if (dIter->status().type() != boost::filesystem::regular_file)
 			continue;
 		std::string relativePath;
-		if (!Helpers::getRelativePath(relativePath, dIter->path().native(),
+		if (!Helpers::getRelativePath(relativePath, dIter->path().string(),
 			options.songOutput))
 		{
 			assert(false);
@@ -257,9 +264,12 @@ static void removeDeletedSongs(const SongMap& songs, const Options& options)
 		if (relativePaths.find(relativePath) == relativePaths.end())
 		{
 			std::printf("Removing song '%s'.\n", relativePath.c_str());
-			boost::filesystem::remove(dIter->path());
+			removeFiles.emplace_back(relativePath);
 		}
 	}
+
+	for (const boost::filesystem::path& path : removeFiles)
+		boost::filesystem::remove(path);
 
 	std::printf("Done.\n");
 }
