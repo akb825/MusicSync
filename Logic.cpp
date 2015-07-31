@@ -264,7 +264,7 @@ static void removeDeletedSongs(const SongMap& songs, const Options& options)
 		if (relativePaths.find(relativePath) == relativePaths.end())
 		{
 			std::printf("Removing song '%s'.\n", relativePath.c_str());
-			removeFiles.emplace_back(relativePath);
+			removeFiles.emplace_back(dIter->path());
 		}
 	}
 
