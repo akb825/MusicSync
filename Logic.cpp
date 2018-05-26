@@ -226,7 +226,7 @@ static void syncSongs(const SongMap& songs, const Options& options)
 			std::printf("Copied song to '%s'.\n", iter->second.c_str());
 		else
 		{
-			std::fprintf(stderr, "Error: Couldn't copying song '%s' to '%s'.\n",
+			std::fprintf(stderr, "Error: Couldn't copy song '%s' to '%s'.\n",
 				iter->first.c_str(), iter->second.c_str());
 		}
 	}
