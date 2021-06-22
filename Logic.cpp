@@ -96,7 +96,8 @@ static void getSongPaths(SongMap& songs,
 			if (Helpers::getRelativePath(finalPath, eIter->song,
 				options.pathTrim))
 			{
-				finalPath = Helpers::repairFilename(finalPath);
+				finalPath = Helpers::repairFilename(finalPath,
+					options.noUnicode);
 				songs.insert(std::make_pair(eIter->song, finalPath));
 			}
 			else

@@ -5,6 +5,7 @@
 static const char* const cRemovePlaylists = "--remove-old-playlists";
 static const char* const cRemoveSongs = "--remove-old-songs";
 static const char* const cWindowsSeparators = "--windows-separators";
+static const char* const cNoUnicode = "--no-unicode";
 static const char* const cPathTrim = "--trim-prefix";
 static const char* const cPathPrefix = "--path-prefix";
 static const char* const cPlaylistInput = "--playlist-input-dir";
@@ -28,7 +29,7 @@ static bool getNextString(unsigned int& index, std::string& string,
 }
 
 Options::Options()
-	: removePlaylists(false), removeSongs(false), windowsSeparators(false)
+	: removePlaylists(false), removeSongs(false), windowsSeparators(false), noUnicode(false)
 {
 }
 
@@ -104,13 +105,14 @@ void Options::printHelp()
 		"   %s: Remove songs that appear in the song output directory\n"
 			"     but not in any playlist.\n"
 		"   %s: Replace '/' with '\\' in playlist paths.\n"
+		"   %s: Remove Unicode characters in filenames.\n"
 		"   %s: A prefix to trim from every song path in a playlist file.\n"
 		"   %s: A prefix to add to every song path in a playlist file.\n"
 		"   %s: The input directory to read M3U playlists from.\n"
 		"   %s: The output directory to write M3U playlists to.\n"
 		"   %s: The output directory to write song fiels to.\n",
 		cProgramName, cRemovePlaylists, cRemoveSongs, cWindowsSeparators,
-		cPathTrim, cPathPrefix, cPlaylistInput, cPlaylistOutput, cSongOutput,
-		cRemovePlaylists, cRemoveSongs, cWindowsSeparators, cPathTrim,
-		cPathPrefix, cPlaylistInput, cPlaylistOutput, cSongOutput);
+		cNoUnicode, cPathTrim, cPathPrefix, cPlaylistInput, cPlaylistOutput,
+		cSongOutput, cRemovePlaylists, cRemoveSongs, cWindowsSeparators,
+		cPathTrim, cPathPrefix, cPlaylistInput, cPlaylistOutput, cSongOutput);
 }

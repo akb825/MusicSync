@@ -52,11 +52,11 @@ bool getRelativePath(std::string& finalPath, const std::string& path,
 	return true;
 }
 
-static bool isValid(char c)
+static bool isValid(char c, bool noUnicode)
 {
 	const char cReserved[] = {'<', '>', ':', '"', '/', '\\', '|', '?', '*'};
 
-	if (!std::isprint(c))
+	if (noUnicode && !std::isprint(c))
 		return false;
 	for (std::size_t i = 0; i < sizeof(cReserved)/sizeof(char); ++i)
 	{
@@ -66,7 +66,7 @@ static bool isValid(char c)
 	return true;
 }
 
-std::string repairFilename(const std::string& path)
+std::string repairFilename(const std::string& path, bool noUnicode)
 {
 	boost::filesystem::path origPath = path;
 	std::string fileName = origPath.filename().string();
@@ -75,7 +75,7 @@ std::string repairFilename(const std::string& path)
 	for (std::string::const_iterator iter = fileName.begin();
 		iter != fileName.end(); ++iter)
 	{
-		if (!isValid(*iter))
+		if (!isValid(*iter, noUnicode))
 			++numInvalid;
 	}
 
@@ -92,7 +92,7 @@ std::string repairFilename(const std::string& path)
 		for (std::string::iterator iter = fileName.begin();
 			iter != fileName.end(); ++iter)
 		{
-			if (!isValid(*iter))
+			if (!isValid(*iter, noUnicode))
 				*iter = cReplaceChar;
 		}
 	}

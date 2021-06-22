@@ -14,6 +14,7 @@ struct Options
 	bool removePlaylists;
 	bool removeSongs;
 	bool windowsSeparators;
+	bool noUnicode;
 	std::string pathTrim;
 	std::string pathPrefix;
 	std::string playlistInput;
