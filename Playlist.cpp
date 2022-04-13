@@ -1,9 +1,26 @@
+/*
+ * Copyright 2011-2022 Aaron Barany
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "Playlist.h"
+
 #include "Helpers.h"
-#include <fstream>
-#include <cstring>
-#include <cstdio>
 #include <cassert>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
 
 static const char* const cHeader = "#EXTM3U";
 static const char* const cInfo = "#EXTINF";
@@ -23,8 +40,7 @@ bool Playlist::load(const std::string& fileName)
 	std::string header;
 	if (!Helpers::readLine(header, stream))
 	{
-		std::fprintf(stderr, "Error: Error reading file '%s'.\n",
-			fileName.c_str());
+		std::fprintf(stderr, "Error: Error reading file '%s'.\n", fileName.c_str());
 		return false;
 	}
 
@@ -40,22 +56,19 @@ bool Playlist::load(const std::string& fileName)
 	{
 		if (!Helpers::readLine(info, stream))
 		{
-			std::fprintf(stderr, "Error: Error reading file '%s'.\n",
-				fileName.c_str());
+			std::fprintf(stderr, "Error: Error reading file '%s'.\n", fileName.c_str());
 			return false;
 		}
 		if (info.empty())
 			continue;
 		if (info.find(cInfo) != 0 || stream.eof())
 		{
-			std::fprintf(stderr, "Error: File '%s' isn't a valid M3U file.\n",
-				fileName.c_str());
+			std::fprintf(stderr, "Error: File '%s' isn't a valid M3U file.\n", fileName.c_str());
 			return false;
 		}
 		if (!Helpers::readLine(songPath, stream))
 		{
-			std::fprintf(stderr, "Error: Error reading file '%s'.\n",
-				fileName.c_str());
+			std::fprintf(stderr, "Error: Error reading file '%s'.\n", fileName.c_str());
 			return false;
 		}
 		addSong(songPath, info);
@@ -78,11 +91,10 @@ bool Playlist::save(const std::string& fileName) const
 
 	stream << cHeader << std::endl;
 
-	for (EntryVector::const_iterator iter = m_entries.begin();
-		iter != m_entries.end(); ++iter)
+	for (const Entry& entry : m_entries)
 	{
-		stream << iter->info << std::endl;
-		stream << iter->song << std::endl;
+		stream << entry.info << std::endl;
+		stream << entry.song << std::endl;
 	}
 
 	std::printf("Saved playlist '%s'.\n", fileName.c_str());
@@ -93,4 +105,3 @@ void Playlist::addSong(const std::string& song, const std::string& info)
 {
 	m_entries.push_back(Entry(song, info));
 }
-

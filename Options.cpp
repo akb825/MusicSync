@@ -1,3 +1,19 @@
+/*
+ * Copyright 2011-2022 Aaron Barany
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "Options.h"
 #include <cstring>
 #include <cstdio>
@@ -53,6 +69,11 @@ bool Options::getFromCommandLine(unsigned int argc, const char* const* argv)
 			++index;
 			windowsSeparators = true;
 		}
+		else if (std::strcmp(argv[index], cNoUnicode) == 0)
+		{
+			++index;
+			noUnicode = true;
+		}
 		else if (std::strcmp(argv[index], cPathTrim) == 0)
 		{
 			if (!getNextString(index, pathTrim, argc, argv, *this))
@@ -96,14 +117,14 @@ void Options::printHelp()
 {
 	std::fprintf(stderr,
 		"Usage: %s [%s] [%s]\n"
-		"         [%s] [%s prefix] [%s prefix]\n"
-		"         %s path %s path\n"
-		"         %s path\n"
+		"         [%s] [%s] [%s <prefix>]\n"
+		"         [%s <prefix>] %s <path>\n"
+		"         %s <path> %s <path>\n"
 		"\nOptions:\n"
 		"   %s: Remove playlists that appear in the playlist output\n"
-			"     directory but not the input directory.\n"
+		"     directory but not the input directory.\n"
 		"   %s: Remove songs that appear in the song output directory\n"
-			"     but not in any playlist.\n"
+		"     but not in any playlist.\n"
 		"   %s: Replace '/' with '\\' in playlist paths.\n"
 		"   %s: Remove Unicode characters in filenames.\n"
 		"   %s: A prefix to trim from every song path in a playlist file.\n"
@@ -111,8 +132,8 @@ void Options::printHelp()
 		"   %s: The input directory to read M3U playlists from.\n"
 		"   %s: The output directory to write M3U playlists to.\n"
 		"   %s: The output directory to write song fiels to.\n",
-		cProgramName, cRemovePlaylists, cRemoveSongs, cWindowsSeparators,
-		cNoUnicode, cPathTrim, cPathPrefix, cPlaylistInput, cPlaylistOutput,
-		cSongOutput, cRemovePlaylists, cRemoveSongs, cWindowsSeparators,
-		cPathTrim, cPathPrefix, cPlaylistInput, cPlaylistOutput, cSongOutput);
+		cProgramName, cRemovePlaylists, cRemoveSongs, cWindowsSeparators, cNoUnicode, cPathTrim,
+		cPathPrefix, cPlaylistInput, cPlaylistOutput, cSongOutput, cRemovePlaylists, cRemoveSongs,
+		cWindowsSeparators, cNoUnicode, cPathTrim, cPathPrefix, cPlaylistInput, cPlaylistOutput,
+		cSongOutput);
 }

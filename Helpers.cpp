@@ -1,9 +1,26 @@
+/*
+ * Copyright 2011-2022 Aaron Barany
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "Helpers.h"
-#include <openssl/md5.h>
-#include <boost/filesystem.hpp>
+
+#include "md5.h"
+#include <cassert>
 #include <cctype>
 #include <cstdio>
-#include <cassert>
+#include <filesystem>
 
 namespace Helpers
 {
@@ -11,34 +28,19 @@ namespace Helpers
 bool readLine(std::string& line, std::istream& stream)
 {
 	line.clear();
-	const unsigned int cBufferSize = 1024;
-	char buffer[cBufferSize];
-	stream.getline(buffer, cBufferSize);
-	if (stream.eof() || !stream.fail())
-	{
-		line = buffer;
-		return true;
-	}
-	else if (stream.bad())
-		return false;
-
-	unsigned int currBufferSize = cBufferSize;
 	do
 	{
-		currBufferSize *= 2;
-		char* dynBuffer = new char[currBufferSize];
-		stream.getline(buffer, cBufferSize);
-		if (stream.eof() || !stream.fail())
-		{
-			line = buffer;
-			return true;
-		}
-		else if (stream.bad())
-			return false;
-	} while (true);
+		int c = stream.get();
+		if (!stream.good())
+			break;
 
-	//Shouldn't reach here.
-	return false;
+		if (c == '\r')
+			continue;
+		else if (c == '\n')
+			return true;
+		line.push_back(static_cast<char>(c));
+	} while (true);
+	return stream.eof();
 }
 
 bool getRelativePath(std::string& finalPath, const std::string& path,
@@ -47,7 +49,7 @@ bool getRelativePath(std::string& finalPath, const std::string& path,
 	if (!trimFront.empty() && path.find(trimFront) != 0)
 		return false;
 	finalPath = path.substr(trimFront.size());
-	while (!finalPath.empty() && *finalPath.begin() == cPathSeparator)
+	while (!finalPath.empty() && finalPath.front() == cPathSeparator)
 		finalPath.erase(finalPath.begin());
 	return true;
 }
@@ -68,14 +70,13 @@ static bool isValid(char c, bool noUnicode)
 
 std::string repairFilename(const std::string& path, bool noUnicode)
 {
-	boost::filesystem::path origPath = path;
+	std::filesystem::path origPath = path;
 	std::string fileName = origPath.filename().string();
 
 	unsigned int numInvalid = 0;
-	for (std::string::const_iterator iter = fileName.begin();
-		iter != fileName.end(); ++iter)
+	for (char c : fileName)
 	{
-		if (!isValid(*iter, noUnicode))
+		if (!isValid(c, noUnicode))
 			++numInvalid;
 	}
 
@@ -89,72 +90,32 @@ std::string repairFilename(const std::string& path, bool noUnicode)
 	if (float(numInvalid)/nameLength <= cMaxToReplace)
 	{
 		const char cReplaceChar = '_';
-		for (std::string::iterator iter = fileName.begin();
-			iter != fileName.end(); ++iter)
+		for (char& c : fileName)
 		{
-			if (!isValid(*iter, noUnicode))
-				*iter = cReplaceChar;
+			if (!isValid(c, noUnicode))
+				c = cReplaceChar;
 		}
 	}
 	else
-	{
-		const unsigned int cBufferSize = 256;
-		char buffer[cBufferSize];
-		unsigned char hash[MD5_DIGEST_LENGTH];
-		MD5((const unsigned char*)path.c_str(), path.size(), hash);
-
-		//2 hex digits per byte
-		char hashString[MD5_DIGEST_LENGTH*2 + 1];
-		for (unsigned int i = 0; i < MD5_DIGEST_LENGTH; ++i)
-			std::snprintf(hashString + i*2, 3, "%02X", hash[i]);
-
-		int result = snprintf(buffer, cBufferSize, "%s%s", hashString,
-			origPath.extension().string().c_str());
-		assert(result >= 0 && result < cBufferSize);
-		fileName = buffer;
-	}
+		fileName = MD5(path).hexdigest() + origPath.extension().string();
 	return (origPath.parent_path()/fileName).string();
 }
 
-std::string getPlaylistSongPath(const std::string& relativePath,
-	const std::string& prefix, bool windowsSeparators)
+std::string getPlaylistSongPath(const std::string& relativePath, const std::string& prefix,
+	bool windowsSeparators)
 {
-	boost::filesystem::path finalPath = prefix;
+	std::filesystem::path finalPath = prefix;
 	finalPath /= relativePath;
 	std::string retVal = finalPath.string();
 	if (windowsSeparators)
 	{
-		for (std::string::iterator iter = retVal.begin();
-			iter != retVal.end(); ++iter)
+		for (char& c : retVal)
 		{
-			if (*iter == cPathSeparator)
-				*iter = cWindowsPathSeparator;
+			if (c == cPathSeparator)
+				c = cWindowsPathSeparator;
 		}
 	}
 	return retVal;
-}
-
-bool processPath(std::string& finalPath, const std::string& path,
-	const std::string& trimFront, const std::string& newFront,
-	bool windowsSeparators)
-{
-	if (!trimFront.empty() && path.find(trimFront) != 0)
-		return false;
-	std::string trimmed = path.substr(trimFront.size());
-	finalPath = (boost::filesystem::path(newFront)/trimmed).string();
-	return true;
-}
-
-std::string convertSeprators(const std::string& path)
-{
-	std::string finalPath = path;
-	for (std::string::iterator iter = finalPath.begin();
-		iter != finalPath.end(); ++iter)
-	{
-		if (*iter == cPathSeparator)
-			*iter = cWindowsPathSeparator;
-	}
-	return path;
 }
 
 }
